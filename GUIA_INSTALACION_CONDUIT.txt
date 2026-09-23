@@ -1,0 +1,225 @@
+GUIA DE INSTALACION Y EJECUCION - CONDUIT
+Proyecto Fase 1 - Analisis y pruebas de software
+
+Equipo:
+- William
+- Jonathan
+- Carlos Menchu
+
+============================================================
+1. REQUISITOS PREVIOS
+============================================================
+
+Antes de comenzar, instalar:
+
+- Node.js y npm
+- MySQL (puede utilizarse WampServer o XAMPP)
+- Un editor de texto, por ejemplo Visual Studio Code
+
+Comprobar Node.js y npm en CMD:
+
+node --version
+npm --version
+
+Tambien debe estar iniciado el servicio de MySQL.
+
+============================================================
+2. DESCOMPRIMIR EL PROYECTO
+============================================================
+
+1. Copiar el archivo conduit-equipo.zip a una carpeta de trabajo.
+2. Extraer todo su contenido.
+3. Abrir CMD dentro de la carpeta extraida.
+
+Ejemplo:
+
+cd /d C:\Users\TU_USUARIO\Proyectos_UMG\conduit-realworld-example-app
+
+============================================================
+3. INSTALAR LAS DEPENDENCIAS
+============================================================
+
+Ejecutar los siguientes comandos desde la carpeta principal:
+
+npm install
+npm install -w backend mysql2
+
+Nota: no ejecutar "npm audit fix --force", porque puede cambiar
+dependencias importantes y provocar errores en la aplicacion.
+
+============================================================
+4. CREAR Y CONFIGURAR EL ARCHIVO .ENV
+============================================================
+
+Crear el archivo de configuracion con este comando:
+
+copy backend\.env.example backend\.env
+
+Abrir backend\.env con el Bloc de notas:
+
+notepad backend\.env
+
+Verificar que la configuracion de desarrollo tenga estos valores:
+
+DEV_DB_USERNAME=root
+DEV_DB_PASSWORD=
+DEV_DB_NAME=database_development
+DEV_DB_HOSTNAME=127.0.0.1
+DEV_DB_DIALECT=mysql
+DEV_DB_LOGGING=false
+
+IMPORTANTE:
+- Si el usuario root de MySQL tiene contrasena, escribirla despues del signo =.
+- Si root no tiene contrasena, dejar DEV_DB_PASSWORD= completamente vacio.
+- No escribir la palabra null como contrasena.
+
+Guardar y cerrar el archivo.
+
+============================================================
+5. CREAR LA BASE DE DATOS
+============================================================
+
+Con MySQL iniciado, ejecutar:
+
+npm run sqlz -- db:create
+
+Debe aparecer un mensaje similar a:
+
+Database database_development created.
+
+============================================================
+6. CREAR LAS TABLAS
+============================================================
+
+Ejecutar temporalmente el backend:
+
+npm run dev -w backend
+
+Esperar hasta ver estos mensajes:
+
+Server running on http://localhost:3001
+Connection with development database has been established.
+
+Luego presionar Ctrl+C. Si CMD pregunta:
+
+¿Desea terminar el trabajo por lotes (S/N)?
+
+Responder S y presionar Enter.
+
+IMPORTANTE: no ejecutar db:migrate antes de este paso. En esta version
+del proyecto, el backend utiliza sequelize.sync para crear correctamente
+las columnas de relacion necesarias.
+
+============================================================
+7. CARGAR LOS DATOS DE PRUEBA
+============================================================
+
+Ejecutar:
+
+npm run sqlz -- db:seed:all
+
+El proceso debe finalizar sin errores y crear usuarios y articulos de prueba.
+
+============================================================
+8. INICIAR LA APLICACION
+============================================================
+
+Usar dos ventanas de CMD.
+
+VENTANA 1 - BACKEND
+
+cd /d C:\RUTA\DEL\PROYECTO\conduit-realworld-example-app
+npm run dev -w backend
+
+Mantener esta ventana abierta.
+
+VENTANA 2 - FRONTEND
+
+cd /d C:\RUTA\DEL\PROYECTO\conduit-realworld-example-app
+npm run dev -w frontend
+
+Mantener esta ventana abierta.
+
+Abrir en el navegador:
+
+http://localhost:3000
+
+La API puede comprobarse en:
+
+http://localhost:3001
+
+Debe mostrar:
+
+{"status":"API is running on /api"}
+
+IMPORTANTE: en Windows se recomienda iniciar backend y frontend por
+separado. No utilizar el comando general "npm run dev", porque el script
+original puede presentar problemas con las comillas de CMD.
+
+============================================================
+9. FUNCIONES QUE SE PUEDEN PROBAR
+============================================================
+
+- Registrar un usuario.
+- Iniciar sesion.
+- Consultar articulos.
+- Crear un articulo.
+- Editar un articulo propio.
+- Eliminar un articulo propio.
+- Publicar comentarios.
+- Marcar articulos como favoritos.
+- Consultar perfiles.
+- Seguir o dejar de seguir usuarios.
+
+============================================================
+10. SOLUCION DE PROBLEMAS FRECUENTES
+============================================================
+
+ERROR: Access denied for user 'root'@'localhost'
+
+- Revisar DEV_DB_PASSWORD en backend\.env.
+- Si root no tiene contrasena, dejar DEV_DB_PASSWORD= vacio.
+- Verificar que MySQL este iniciado.
+
+ERROR: Unknown column 'userId' in 'field list'
+
+- Eliminar y volver a crear la base de datos.
+- Iniciar primero el backend para que sequelize.sync cree las tablas.
+- Ejecutar despues db:seed:all.
+
+Comandos para reconstruir la base de datos:
+
+npm run sqlz -- db:drop
+npm run sqlz -- db:create
+npm run dev -w backend
+
+Despues de que se establezca la conexion, detener el backend con Ctrl+C y ejecutar:
+
+npm run sqlz -- db:seed:all
+
+ERROR: node o npm no se reconoce como comando
+
+- Instalar Node.js.
+- Cerrar y volver a abrir CMD despues de instalarlo.
+- Comprobar con node --version y npm --version.
+
+La pagina http://localhost:3000 no abre
+
+- Confirmar que el frontend continua ejecutandose en la segunda consola.
+- Confirmar que el backend continua ejecutandose en la primera consola.
+- Revisar los mensajes de error de ambas ventanas.
+
+============================================================
+11. ARCHIVOS QUE NO SE INCLUYEN EN EL ZIP
+============================================================
+
+Por seguridad y para reducir el tamano, el ZIP no incluye:
+
+- node_modules
+- .git
+- backend\.env
+
+Por eso cada integrante debe ejecutar npm install y crear su propio
+backend\.env siguiendo esta guia.
+
+FIN DE LA GUIA
