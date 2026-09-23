@@ -6,33 +6,48 @@ import useArticleList from "../hooks/useArticles";
 function HomeArticles() {
   const { tabName, tagName } = useFeedContext();
 
-  const { articles, articlesCount, loading, setArticlesData } = useArticleList({
+  const {
+    articles = [],
+    articlesCount = 0,
+    loading,
+    setArticlesData,
+  } = useArticleList({
     location: tabName,
     tabName,
     tagName,
   });
 
-  return loading ? (
-    <div className="article-preview">
-      <em>Loading articles list...</em>
-    </div>
-  ) : articles.length > 0 ? (
-    <>
-      <ArticlesPreview
-        articles={articles}
-        loading={loading}
-        updateArticles={setArticlesData}
-      />
+  if (loading) {
+    return (
+      <div className="article-preview">
+        <em>Loading articles list...</em>
+      </div>
+    );
+  }
 
-      <ArticlesPagination
-        articlesCount={articlesCount}
-        location={tabName}
-        tagName={tagName}
-        updateArticles={setArticlesData}
-      />
-    </>
-  ) : (
-    <div className="article-preview">Articles not available.</div>
+  if (articles.length > 0) {
+    return (
+      <>
+        <ArticlesPreview
+          articles={articles}
+          loading={loading}
+          updateArticles={setArticlesData}
+        />
+
+        <ArticlesPagination
+          articlesCount={articlesCount}
+          location={tabName}
+          tagName={tagName}
+          updateArticles={setArticlesData}
+        />
+      </>
+    );
+  }
+
+  return (
+    <div className="article-preview">
+      Articles not available.
+    </div>
   );
 }
 

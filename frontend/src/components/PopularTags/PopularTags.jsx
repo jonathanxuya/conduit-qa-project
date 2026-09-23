@@ -10,8 +10,13 @@ function PopularTags() {
     setLoading(true);
 
     getTags()
-      .then(setTags)
-      .catch(console.error)
+      .then((data) => {
+        setTags(Array.isArray(data) ? data : []);
+      })
+      .catch((error) => {
+        console.error("Error loading tags:", error);
+        setTags([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -19,11 +24,12 @@ function PopularTags() {
     <aside className="col-md-3">
       <div className="sidebar">
         <h6>Popular Tags</h6>
+
         <div className="tag-list">
-          {tags.length > 0 ? (
-            <TagButton tagsList={tags} />
-          ) : loading ? (
+          {loading ? (
             <p>Loading tags...</p>
+          ) : tags.length > 0 ? (
+            <TagButton tagsList={tags} />
           ) : (
             <p>Tags list not available</p>
           )}
