@@ -1,0 +1,40 @@
+name: Conduit DEV - Build Validation
+
+on:
+  push:
+    branches: [DEV]
+  pull_request:
+    branches: [DEV, QA, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-validation:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build -w frontend
+
+      - name: Validate backend syntax
+        run: |
+          find backend -type f -name '*.js' -not -path '*/node_modules/*' -print0 | xargs -0 -r -n 1 node --check
+
+# Initial build-only workflow.
+# Unit tests, SonarCloud quality gate, Newman API tests and cloud deployment
+# must be added and validated before this check can qualify as the E13 pipeline.
