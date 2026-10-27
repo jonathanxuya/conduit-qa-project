@@ -73,6 +73,9 @@ jobs:
   sonar:
     name: 3. SonarCloud + Quality Gate
     needs: unit-tests
+    # El plan actual de SonarCloud no permite consultar Quality Gates de ramas secundarias.
+    # Analizar PRs y main; no ejecutar análisis de rama en push a DEV/QA.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -87,14 +90,17 @@ jobs:
           path: coverage/
 
       - name: SonarCloud scan (falla si el quality gate no aprueba)
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
   api-tests:
     name: 4. API tests (Newman)
-    needs: sonar
+    needs: [unit-tests, sonar]
+    # Newman sigue en DEV/QA aunque Sonar se omita por restricciones del plan.
+    # En PR/main exige que SonarCloud haya aprobado el Quality Gate.
+    if: always() && needs.unit-tests.result == 'success' && (needs.sonar.result == 'success' || needs.sonar.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
