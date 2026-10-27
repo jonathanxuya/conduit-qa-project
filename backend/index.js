@@ -13,7 +13,14 @@ const profilesRoutes = require("./routes/profiles");
 const tagsRoutes = require("./routes/tags");
 
 const app = express();
-app.use(cors());
+app.disable("x-powered-by");
+
+// CORS: solo los orígenes permitidos en CORS_ORIGIN (separados por coma).
+// Si la variable no está definida (desarrollo local / CI), se refleja el origen de la petición.
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+  : true;
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 (async () => {
