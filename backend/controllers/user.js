@@ -33,7 +33,7 @@ const updateUser = async (req, res, next) => {
       if (value !== undefined && key !== "password") loggedUser[key] = value;
     });
 
-    if (password !== undefined || password !== "") {
+    if (password !== undefined && password !== "") {
       loggedUser.password = await bcryptHash(password);
     }
 

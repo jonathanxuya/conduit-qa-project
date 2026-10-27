@@ -18,7 +18,7 @@ const verifyToken = async (req, res, next) => {
       where: { email: userVerified.email },
     });
 
-    if (!req.loggedUser) next(new NotFoundError("User"));
+    if (!req.loggedUser) return next(new NotFoundError("User"));
 
     headers.email = userVerified.email;
     req.loggedUser.dataValues.token = token;
