@@ -8,7 +8,7 @@ function FavButton({ favorited, favoritesCount, handler, right, slug, text }) {
 
   const buttonPosition = right ? "pull-xs-right" : "";
   const buttonStyle = favorited ? "active" : "";
-  const buttonText = text ? "Favorite" : "";
+  const buttonText = text ? "Favorite" : !isAuth ? "" : "";
 
   const handleClick = () => {
     if (!isAuth) return alert("You need to login first");
