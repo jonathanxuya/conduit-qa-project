@@ -1524,10 +1524,3 @@ footer > .container {
   margin-right: 5px;
   cursor: pointer;
 }
-
-/* Botón nativo para el menú de usuario (accesibilidad), sin estilos de botón por defecto */
-.dropdown-toggle-button {
-  background: none;
-  border: 0;
-  font: inherit;
-}

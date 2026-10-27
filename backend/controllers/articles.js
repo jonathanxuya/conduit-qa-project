@@ -39,7 +39,7 @@ const allArticles = async (req, res, next) => {
           ...(author && { where: { username: author } }),
         },
       ],
-      limit: Number.parseInt(limit, 10),
+      limit: parseInt(limit),
       offset: offset * limit,
       order: [["createdAt", "DESC"]],
     };
@@ -129,7 +129,7 @@ const articlesFeed = async (req, res, next) => {
 
     const articles = await Article.findAndCountAll({
       include: includeOptions,
-      limit: Number.parseInt(limit, 10),
+      limit: parseInt(limit),
       offset: offset * limit,
       order: [["createdAt", "DESC"]],
       where: { userId: authors.map((author) => author.id) },
