@@ -863,12 +863,12 @@ fieldset[disabled] a.btn {
   text-decoration: none;
 }
 
-.nav-signup {
-  color: #fff !important;
+.navbar-light .navbar-nav .nav-link.nav-signup {
+  color: #fff;
   background: var(--brand);
   border: 1px solid var(--brand);
   border-radius: 99em;
-  padding: 5px 12px !important;
+  padding: 5px 12px;
   font-size: 0.8125rem;
   line-height: 1.25rem;
   transition:
@@ -876,9 +876,9 @@ fieldset[disabled] a.btn {
     border-color 200ms ease;
 }
 
-.nav-signup:hover,
-.nav-signup:focus {
-  color: #fff !important;
+.navbar-light .navbar-nav .nav-link.nav-signup:hover,
+.navbar-light .navbar-nav .nav-link.nav-signup:focus {
+  color: #fff;
   background: var(--brand-hover);
   border-color: var(--brand-hover);
 }
@@ -1070,11 +1070,11 @@ ul.tag-list li {
  * ============================================================================ */
 
 .pull-xs-right {
-  float: right !important;
+  float: right;
 }
 
 .text-xs-center {
-  text-align: center !important;
+  text-align: center;
 }
 
 /* ============================================================================
@@ -1300,7 +1300,7 @@ footer .attribution {
 }
 
 .article-page .banner .btn:hover {
-  transition: 0.1s all;
+  transition: opacity 0.1s;
   opacity: 1;
 }
 

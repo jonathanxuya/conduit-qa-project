@@ -23,14 +23,12 @@ const allowedOrigins = process.env.CORS_ORIGIN
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
-(async () => {
-  try {
-    await sequelize.sync({ alter: true });
-    console.log(`Connection with ${env} database has been established.`);
-  } catch (error) {
-    console.error("Unable to connect to the database:", error);
-  }
-})();
+sequelize
+  .sync({ alter: true })
+  .then(() =>
+    console.log(`Connection with ${env} database has been established.`),
+  )
+  .catch((error) => console.error("Unable to connect to the database:", error));
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static("../frontend/dist"));
