@@ -39,7 +39,7 @@ function CommentEditor({ updateComments }) {
 
       <div className="card-footer">
         <Avatar alt={username} className="comment-author-img" src={image} />
-        <button className="btn btn-sm btn-primary">Post Comment</button>
+        <button type="submit" className="btn btn-sm btn-primary">Post Comment</button>
       </div>
     </form>
   ) : (

@@ -1,5 +1,4 @@
 function FormFieldset({
-  autoFocus,
   children,
   handler,
   minLength,
@@ -13,7 +12,6 @@ function FormFieldset({
   return (
     <fieldset className="form-group">
       <input
-        autoFocus={autoFocus}
         className={`form-control ${normal ? "" : "form-control-lg"}`}
         minLength={minLength}
         name={name}
