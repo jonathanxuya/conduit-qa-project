@@ -58,6 +58,12 @@ describe("FavButton", () => {
     await waitFor(() => expect(handler).toHaveBeenCalledWith(updated));
   });
 
+  test("con la propiedad text muestra la etiqueta Favorite", () => {
+    useAuth.mockReturnValue({ headers: null, isAuth: true });
+    render(<FavButton slug="a" favorited={false} favoritesCount={0} text />);
+    expect(screen.getByRole("button")).toHaveTextContent("Favorite");
+  });
+
   test("muestra el contador y la clase active cuando ya es favorito", () => {
     useAuth.mockReturnValue({ headers: null, isAuth: true });
     render(<FavButton slug="a" favorited favoritesCount={7} />);

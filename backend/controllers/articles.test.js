@@ -114,6 +114,27 @@ describe("createArticle", () => {
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
+  test("etiquetas repetidas (también con espacios) se crean una sola vez", async () => {
+    Article.findOne.mockResolvedValue(null);
+    const created = fakeArticle();
+    Article.create.mockResolvedValue(created);
+    Tag.findByPk.mockResolvedValue(null);
+    Tag.create.mockImplementation(async ({ name }) => ({ name }));
+
+    await ctrl.createArticle(
+      {
+        loggedUser: { ...author, dataValues: {} },
+        ...body({ title: "Repetidas", description: "d", body: "b", tagList: ["testing", " testing ", "testing"] }),
+      },
+      mockResponse(),
+      vi.fn(),
+    );
+
+    expect(Tag.create).toHaveBeenCalledTimes(1);
+    expect(Tag.create).toHaveBeenCalledWith({ name: "testing" });
+    expect(created.addTagList).toHaveBeenCalledTimes(1);
+  });
+
   test("etiqueta existente se reutiliza sin crearla de nuevo", async () => {
     Article.findOne.mockResolvedValue(null);
     const created = fakeArticle();
@@ -244,5 +265,21 @@ describe("allArticles / articlesFeed - paginación", () => {
     await ctrl.articlesFeed({ loggedUser, query: {} }, mockResponse(), vi.fn());
 
     expect(Article.findAndCountAll.mock.calls[0][0].where).toEqual({ userId: [4, 9] });
+  });
+
+  test("articlesFeed agrega tagList, seguidores y favoritos a cada artículo", async () => {
+    const a1 = fakeArticle({ slug: "uno" });
+    const a2 = fakeArticle({ slug: "dos" });
+    Article.findAndCountAll.mockResolvedValue({ rows: [a1, a2], count: 2 });
+    const loggedUser = { getFollowing: vi.fn().mockResolvedValue([{ id: 1 }]) };
+    const res = mockResponse();
+
+    await ctrl.articlesFeed({ loggedUser, query: {} }, res, vi.fn());
+
+    expect(a1.dataValues.tagList).toEqual(["qa"]);
+    expect(a2.dataValues.tagList).toEqual(["qa"]);
+    expect(helpers.appendFollowers).toHaveBeenCalledTimes(2);
+    expect(helpers.appendFavorites).toHaveBeenCalledTimes(2);
+    expect(res.json).toHaveBeenCalledWith({ articles: [a1, a2], articlesCount: 2 });
   });
 });
