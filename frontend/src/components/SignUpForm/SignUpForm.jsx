@@ -56,7 +56,7 @@ function SignUpForm({ onError }) {
         value={password}
         handler={inputHandler}
       ></FormFieldset>
-      <button type="submit" className="btn btn-lg btn-primary pull-xs-right">Sign up</button>
+      <button className="btn btn-lg btn-primary pull-xs-right">Sign up</button>
     </form>
   );
 }
