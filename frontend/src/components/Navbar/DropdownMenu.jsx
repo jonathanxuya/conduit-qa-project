@@ -19,13 +19,16 @@ function DropdownMenu() {
 
   return (
     <li className="nav-item dropdown">
-      <div
-        className="nav-link dropdown-toggle cursor-pointer"
+      <button
+        type="button"
+        className="nav-link dropdown-toggle cursor-pointer dropdown-toggle-button"
+        aria-expanded={dropdown}
+        aria-haspopup="menu"
         onClick={handleClick}
       >
         <Avatar alt={username} className="user-pic" src={image} />
         {username}
-      </div>
+      </button>
 
       <div
         className="dropdown-menu"

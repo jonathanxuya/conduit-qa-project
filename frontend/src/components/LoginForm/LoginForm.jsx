@@ -34,7 +34,6 @@ function LoginForm({ onError }) {
         placeholder="Email"
         value={email}
         handler={inputHandler}
-        autoFocus
       ></FormFieldset>
 
       <FormFieldset
@@ -46,7 +45,7 @@ function LoginForm({ onError }) {
         handler={inputHandler}
         minLength="5"
       ></FormFieldset>
-      <button className="btn btn-lg btn-primary pull-xs-right">Login</button>
+      <button type="submit" className="btn btn-lg btn-primary pull-xs-right">Login</button>
     </form>
   );
 }

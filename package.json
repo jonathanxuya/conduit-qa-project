@@ -19,11 +19,17 @@
     "dev": "concurrently --names 'Node,Vite' -c 'green,blue' 'npm run dev -w backend' 'npm run dev -w frontend'",
     "sqlz": "npx -w backend sequelize-cli",
     "start": "npm run build -w frontend && npm run start -w backend",
-    "test": "vitest"
+    "test": "vitest",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:api": "newman run api-tests/conduit.postman_collection.json -e api-tests/local.postman_environment.json --reporters cli,junit --reporter-junit-export api-tests/results/newman-junit.xml"
   },
   "devDependencies": {
     "@vitejs/plugin-react-swc": "^4.2.3",
+    "@vitest/coverage-v8": "^4.0.18",
     "concurrently": "^9.2.1",
+    "jsdom": "^26.1.0",
+    "newman": "^6.2.3",
     "vitest": "^4.0.18"
   }
 }

@@ -39,7 +39,7 @@ const allArticles = async (req, res, next) => {
           ...(author && { where: { username: author } }),
         },
       ],
-      limit: parseInt(limit),
+      limit: Number.parseInt(limit, 10),
       offset: offset * limit,
       order: [["createdAt", "DESC"]],
     };
@@ -54,15 +54,18 @@ const allArticles = async (req, res, next) => {
       articles = await Article.findAndCountAll(searchOptions);
     }
 
-    for (let article of articles.rows) {
-      const articleTags = await article.getTagList();
+    // Se enriquecen los artículos en paralelo (antes: await dentro del for)
+    await Promise.all(
+      articles.rows.map(async (article) => {
+        const articleTags = await article.getTagList();
 
-      appendTagList(articleTags, article);
-      await appendFollowers(loggedUser, article);
-      await appendFavorites(loggedUser, article);
+        appendTagList(articleTags, article);
+        await appendFollowers(loggedUser, article);
+        await appendFavorites(loggedUser, article);
 
-      delete article.dataValues.Favorites;
-    }
+        delete article.dataValues.Favorites;
+      }),
+    );
 
     res.json({ articles: articles.rows, articlesCount: articles.count });
   } catch (error) {
@@ -92,17 +95,25 @@ const createArticle = async (req, res, next) => {
       body: body,
     });
 
-    for (const tag of tagList) {
-      const tagInDB = await Tag.findByPk(tag.trim());
+    // Etiquetas sin duplicados (por nombre sin espacios) para poder procesarlas
+    // en paralelo sin crear dos veces la misma etiqueta.
+    const uniqueTags = [
+      ...new Map(tagList.map((tag) => [tag.trim(), tag])).values(),
+    ];
 
-      if (tagInDB) {
-        await article.addTagList(tagInDB);
-      } else if (tag.length > 2) {
-        const newTag = await Tag.create({ name: tag.trim() });
+    await Promise.all(
+      uniqueTags.map(async (tag) => {
+        const tagInDB = await Tag.findByPk(tag.trim());
 
-        await article.addTagList(newTag);
-      }
-    }
+        if (tagInDB) {
+          await article.addTagList(tagInDB);
+        } else if (tag.length > 2) {
+          const newTag = await Tag.create({ name: tag.trim() });
+
+          await article.addTagList(newTag);
+        }
+      }),
+    );
 
     delete loggedUser.dataValues.token;
 
@@ -129,19 +140,21 @@ const articlesFeed = async (req, res, next) => {
 
     const articles = await Article.findAndCountAll({
       include: includeOptions,
-      limit: parseInt(limit),
+      limit: Number.parseInt(limit, 10),
       offset: offset * limit,
       order: [["createdAt", "DESC"]],
       where: { userId: authors.map((author) => author.id) },
     });
 
-    for (const article of articles.rows) {
-      const articleTags = await article.getTagList();
+    await Promise.all(
+      articles.rows.map(async (article) => {
+        const articleTags = await article.getTagList();
 
-      appendTagList(articleTags, article);
-      await appendFollowers(loggedUser, article);
-      await appendFavorites(loggedUser, article);
-    }
+        appendTagList(articleTags, article);
+        await appendFollowers(loggedUser, article);
+        await appendFavorites(loggedUser, article);
+      }),
+    );
 
     res.json({ articles: articles.rows, articlesCount: articles.count });
   } catch (error) {
