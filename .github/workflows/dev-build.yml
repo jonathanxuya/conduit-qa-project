@@ -1,26 +1,29 @@
-name: Conduit DEV - Build Validation
+name: Conduit CI - Build, Unit Tests, Sonar, API Tests
+
+# Orden exigido por E13: compilación -> pruebas unitarias -> análisis estático
+# con quality gate -> pruebas de API -> despliegue (job de despliegue a cargo
+# del Ingeniero de Plataforma, se agrega después de api-tests).
 
 on:
   push:
-    branches: [DEV]
+    branches: [DEV, QA, main]
   pull_request:
     branches: [DEV, QA, main]
   workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
-  build-validation:
-    name: Build frontend
+  build:
+    name: 1. Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
@@ -35,6 +38,130 @@ jobs:
         run: |
           find backend -type f -name '*.js' -not -path '*/node_modules/*' -print0 | xargs -0 -r -n 1 node --check
 
-# Initial build-only workflow.
-# Unit tests, SonarCloud quality gate, Newman API tests and cloud deployment
-# must be added and validated before this check can qualify as the E13 pipeline.
+  unit-tests:
+    name: 2. Unit tests (Vitest + coverage)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "## Cobertura de pruebas unitarias" >> "$GITHUB_STEP_SUMMARY"
+          node -e "const s=require('./coverage/coverage-summary.json').total; for (const k of ['lines','statements','functions','branches']) console.log('- ' + k + ': ' + s[k].pct + '%')" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+  sonar:
+    name: 3. SonarCloud + Quality Gate
+    needs: unit-tests
+    # El plan actual de SonarCloud no permite consultar Quality Gates de ramas secundarias.
+    # Analizar PRs y main; no ejecutar análisis de rama en push a DEV/QA.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Sonar necesita el historial completo para "new code"
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+      - name: SonarCloud scan (falla si el quality gate no aprueba)
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+  api-tests:
+    name: 4. API tests (Newman)
+    needs: [unit-tests, sonar]
+    # Newman sigue en DEV/QA aunque Sonar se omita por restricciones del plan.
+    # En PR/main exige que SonarCloud haya aprobado el Quality Gate.
+    if: always() && needs.unit-tests.result == 'success' && (needs.sonar.result == 'success' || needs.sonar.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: conduit_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      NODE_ENV: test
+      PORT: 3001
+      JWT_KEY: ci-only-secret
+      TEST_DB_USERNAME: root
+      TEST_DB_PASSWORD: root
+      TEST_DB_NAME: conduit_test
+      TEST_DB_HOSTNAME: 127.0.0.1
+      TEST_DB_DIALECT: mysql
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Start backend
+        run: |
+          nohup node backend/index.js > backend.log 2>&1 &
+          # Esperar a que la API responda y las tablas estén creadas (sequelize.sync)
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/api/tags > /dev/null; then echo "API lista"; exit 0; fi
+            sleep 2
+          done
+          echo "La API no arrancó"; cat backend.log; exit 1
+
+      - name: Run Postman collection with Newman
+        run: npm run test:api
+
+      - name: Backend log
+        if: failure()
+        run: cat backend.log
+
+      - name: Upload Newman report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-report
+          path: api-tests/results/
+          retention-days: 14
+
+  # deploy:
+  #   name: 5. Deploy
+  #   needs: api-tests
+  #   ... (Ingeniero de Plataforma / DevOps)

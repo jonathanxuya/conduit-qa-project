@@ -1,0 +1,1650 @@
+{
+  "info": {
+    "_postman_id": "bc96ece4-ba57-47f5-855a-cc81acd23008",
+    "name": "Conduit API - Proyecto ACS 2026",
+    "description": "Pruebas de API (E11). Flujo de negocio completo encadenado: registro -> login -> crear artículo -> favorito -> comentario -> seguir autor -> feed -> autorización -> eliminación. Ejecutar en orden (Newman / Collection Runner).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Autenticación y usuario",
+      "item": [
+        {
+          "name": "01 Registrar usuario A",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sufijo único por ejecución para que la colección sea repetible.",
+                  "const runId = Date.now().toString(36) + Math.floor(Math.random() * 1000);",
+                  "pm.collectionVariables.set(\"runId\", runId);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"user\"], \"properties\": {\"user\": {\"type\": \"object\", \"required\": [\"email\", \"username\", \"token\"], \"properties\": {\"email\": {\"type\": \"string\"}, \"username\": {\"type\": \"string\"}, \"token\": {\"type\": \"string\"}, \"bio\": {\"type\": [\"string\", \"null\"]}, \"image\": {\"type\": [\"string\", \"null\"]}}}}});",
+                  "});",
+                  "const user = pm.response.json().user;",
+                  "pm.test(\"Devuelve el username y email enviados\", function () {",
+                  "    pm.expect(user.username).to.eql(\"qa_a_\" + pm.collectionVariables.get(\"runId\"));",
+                  "    pm.expect(user.email).to.eql(\"qa_a_\" + pm.collectionVariables.get(\"runId\") + \"@conduit.test\");",
+                  "});",
+                  "pm.test(\"No expone la contraseña\", function () {",
+                  "    pm.expect(user).to.not.have.property(\"password\");",
+                  "});",
+                  "pm.collectionVariables.set(\"usernameA\", user.username);",
+                  "pm.collectionVariables.set(\"emailA\", user.email);",
+                  "pm.collectionVariables.set(\"tokenA\", user.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Inicio del flujo de negocio: alta de usuario autor.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"username\": \"qa_a_{{runId}}\",\n    \"email\": \"qa_a_{{runId}}@conduit.test\",\n    \"password\": \"Clave123!\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "02 Registrar email duplicado (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});",
+                  "pm.test(\"Mensaje indica email ya existente\", function () {",
+                  "    pm.expect(pm.response.json().errors.body[0]).to.include(\"Email already exists\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"username\": \"otro_{{runId}}\",\n    \"email\": \"{{emailA}}\",\n    \"password\": \"Clave123!\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "03 Registrar sin password (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});",
+                  "pm.test(\"Mensaje indica password requerido\", function () {",
+                  "    pm.expect(pm.response.json().errors.body[0]).to.eql(\"A password is required\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"username\": \"sinpass_{{runId}}\",\n    \"email\": \"sinpass_{{runId}}@conduit.test\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "04 Login usuario A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"user\"], \"properties\": {\"user\": {\"type\": \"object\", \"required\": [\"email\", \"username\", \"token\"], \"properties\": {\"email\": {\"type\": \"string\"}, \"username\": {\"type\": \"string\"}, \"token\": {\"type\": \"string\"}, \"bio\": {\"type\": [\"string\", \"null\"]}, \"image\": {\"type\": [\"string\", \"null\"]}}}}});",
+                  "});",
+                  "pm.test(\"Devuelve un token JWT (3 segmentos)\", function () {",
+                  "    pm.expect(pm.response.json().user.token.split(\".\")).to.have.lengthOf(3);",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenA\", pm.response.json().user.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"email\": \"{{emailA}}\",\n    \"password\": \"Clave123!\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "05 Login con contraseña incorrecta (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});",
+                  "pm.test(\"Mensaje de credenciales inválidas\", function () {",
+                  "    pm.expect(pm.response.json().errors.body[0]).to.eql(\"Wrong email/password combination\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"email\": \"{{emailA}}\",\n    \"password\": \"incorrecta\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "06 Usuario actual",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"user\"], \"properties\": {\"user\": {\"type\": \"object\", \"required\": [\"email\", \"username\", \"token\"], \"properties\": {\"email\": {\"type\": \"string\"}, \"username\": {\"type\": \"string\"}, \"token\": {\"type\": \"string\"}, \"bio\": {\"type\": [\"string\", \"null\"]}, \"image\": {\"type\": [\"string\", \"null\"]}}}}});",
+                  "});",
+                  "pm.test(\"Corresponde al usuario autenticado\", function () {",
+                  "    pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get(\"emailA\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "07 Actualizar bio sin cambiar contraseña",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"La bio quedó actualizada\", function () {",
+                  "    pm.expect(pm.response.json().user.bio).to.eql(\"Bio actualizada por Newman\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user"
+              ]
+            },
+            "description": "Verifica el defecto corregido en controllers/user.js: editar el perfil sin enviar password no debe fallar.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"bio\": \"Bio actualizada por Newman\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08 Login sigue funcionando tras editar perfil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"La contraseña original sigue siendo válida\", function () {",
+                  "    pm.expect(pm.response.json().user).to.have.property(\"token\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"email\": \"{{emailA}}\",\n    \"password\": \"Clave123!\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Artículos",
+      "item": [
+        {
+          "name": "09 Crear artículo sin token (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});",
+                  "pm.test(\"Mensaje pide iniciar sesión\", function () {",
+                  "    pm.expect(pm.response.json().errors.body[0]).to.eql(\"You need to login first!\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"article\": {\n    \"title\": \"x\",\n    \"description\": \"x\",\n    \"body\": \"x\",\n    \"tagList\": []\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "10 Crear artículo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"article\"], \"properties\": {\"article\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}});",
+                  "});",
+                  "const a = pm.response.json().article;",
+                  "pm.test(\"El slug se deriva del título\", function () {",
+                  "    pm.expect(a.slug).to.eql((\"Articulo QA \" + pm.collectionVariables.get(\"runId\")).toLowerCase().replace(/\\W|_/g, \"-\"));",
+                  "});",
+                  "pm.test(\"Conserva las etiquetas y no está marcado como favorito\", function () {",
+                  "    pm.expect(a.tagList).to.have.members([\"qatesting\", \"newman\"]);",
+                  "    pm.expect(a.favorited).to.be.false;",
+                  "    pm.expect(a.favoritesCount).to.eql(0);",
+                  "});",
+                  "pm.collectionVariables.set(\"slug\", a.slug);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"article\": {\n    \"title\": \"Articulo QA {{runId}}\",\n    \"description\": \"Descripcion de prueba\",\n    \"body\": \"Cuerpo del articulo\",\n    \"tagList\": [\n      \"qatesting\",\n      \"newman\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11 Crear artículo con título duplicado (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"article\": {\n    \"title\": \"Articulo QA {{runId}}\",\n    \"description\": \"d\",\n    \"body\": \"b\",\n    \"tagList\": []\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12 Obtener artículo por slug",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"article\"], \"properties\": {\"article\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}});",
+                  "});",
+                  "pm.test(\"Autor es el usuario A\", function () {",
+                  "    pm.expect(pm.response.json().article.author.username).to.eql(pm.collectionVariables.get(\"usernameA\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "13 Actualizar artículo (autor)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"article\"], \"properties\": {\"article\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}});",
+                  "});",
+                  "pm.test(\"El cuerpo quedó editado\", function () {",
+                  "    pm.expect(pm.response.json().article.body).to.eql(\"Cuerpo editado\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"article\": {\n    \"body\": \"Cuerpo editado\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "14 Listar artículos con paginación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"articles\", \"articlesCount\"], \"properties\": {\"articles\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}, \"articlesCount\": {\"type\": \"integer\"}}});",
+                  "});",
+                  "pm.test(\"Respeta el límite de 2\", function () {",
+                  "    pm.expect(pm.response.json().articles.length).to.be.at.most(2);",
+                  "});",
+                  "pm.test(\"Tiempo de respuesta < 2000 ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles?limit=2&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "15 Listar artículos por etiqueta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"articles\", \"articlesCount\"], \"properties\": {\"articles\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}, \"articlesCount\": {\"type\": \"integer\"}}});",
+                  "});",
+                  "pm.test(\"Todos los artículos traen la etiqueta\", function () {",
+                  "    pm.response.json().articles.forEach(a => pm.expect(a.tagList).to.include(\"qatesting\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles?tag=qatesting",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "qatesting"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "16 Listar etiquetas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Incluye la etiqueta creada\", function () {",
+                  "    pm.expect(pm.response.json().tags).to.be.an(\"array\").that.includes(\"qatesting\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tags"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Favoritos y comentarios",
+      "item": [
+        {
+          "name": "17 Marcar como favorito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"article\"], \"properties\": {\"article\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}});",
+                  "});",
+                  "pm.test(\"favorited=true y contador 1\", function () {",
+                  "    pm.expect(pm.response.json().article.favorited).to.be.true;",
+                  "    pm.expect(pm.response.json().article.favoritesCount).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}/favorite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}",
+                "favorite"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "18 Artículos favoritos del usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"articles\", \"articlesCount\"], \"properties\": {\"articles\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}, \"articlesCount\": {\"type\": \"integer\"}}});",
+                  "});",
+                  "pm.test(\"Incluye el artículo marcado\", function () {",
+                  "    pm.expect(pm.response.json().articles.map(a => a.slug)).to.include(pm.collectionVariables.get(\"slug\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles?favorited={{usernameA}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles"
+              ],
+              "query": [
+                {
+                  "key": "favorited",
+                  "value": "{{usernameA}}"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "19 Quitar favorito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"favorited=false y contador 0\", function () {",
+                  "    pm.expect(pm.response.json().article.favorited).to.be.false;",
+                  "    pm.expect(pm.response.json().article.favoritesCount).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}/favorite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}",
+                "favorite"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "20 Crear comentario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\":\"object\",\"required\":[\"comment\"],\"properties\":{\"comment\":{\"type\": \"object\", \"required\": [\"id\", \"body\", \"author\"], \"properties\": {\"id\": {\"type\": \"integer\"}, \"body\": {\"type\": \"string\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"]}}}}});",
+                  "});",
+                  "pm.collectionVariables.set(\"commentId\", pm.response.json().comment.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}",
+                "comments"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": {\n    \"body\": \"Comentario de prueba\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "21 Comentario vacío (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}",
+                "comments"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": {\n    \"body\": \"\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "22 Listar comentarios",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Incluye el comentario creado\", function () {",
+                  "    const ids = pm.response.json().comments.map(c => c.id);",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"commentId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}",
+                "comments"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Perfiles, feed y autorización",
+      "item": [
+        {
+          "name": "23 Registrar usuario B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"user\"], \"properties\": {\"user\": {\"type\": \"object\", \"required\": [\"email\", \"username\", \"token\"], \"properties\": {\"email\": {\"type\": \"string\"}, \"username\": {\"type\": \"string\"}, \"token\": {\"type\": \"string\"}, \"bio\": {\"type\": [\"string\", \"null\"]}, \"image\": {\"type\": [\"string\", \"null\"]}}}}});",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenB\", pm.response.json().user.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"username\": \"qa_b_{{runId}}\",\n    \"email\": \"qa_b_{{runId}}@conduit.test\",\n    \"password\": \"Clave123!\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "24 B sigue a A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"profile\"], \"properties\": {\"profile\": {\"type\": \"object\", \"required\": [\"username\", \"following\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}, \"followersCount\": {\"type\": \"integer\"}}}}});",
+                  "});",
+                  "pm.test(\"following=true\", function () {",
+                  "    pm.expect(pm.response.json().profile.following).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/{{usernameA}}/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "{{usernameA}}",
+                "follow"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "25 Feed de B incluye artículo de A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"articles\", \"articlesCount\"], \"properties\": {\"articles\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"required\": [\"slug\", \"title\", \"description\", \"body\", \"tagList\", \"author\", \"favorited\", \"favoritesCount\"], \"properties\": {\"slug\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"description\": {\"type\": \"string\"}, \"body\": {\"type\": \"string\"}, \"tagList\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"favorited\": {\"type\": \"boolean\"}, \"favoritesCount\": {\"type\": \"integer\"}, \"author\": {\"type\": \"object\", \"required\": [\"username\"], \"properties\": {\"username\": {\"type\": \"string\"}, \"following\": {\"type\": \"boolean\"}}}}}}, \"articlesCount\": {\"type\": \"integer\"}}});",
+                  "});",
+                  "pm.test(\"El feed contiene el artículo del autor seguido\", function () {",
+                  "    pm.expect(pm.response.json().articles.map(a => a.slug)).to.include(pm.collectionVariables.get(\"slug\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/feed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "feed"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "26 B intenta editar artículo de A (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"article\": {\n    \"body\": \"hackeado\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "27 B intenta borrar comentario de A (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}",
+                "comments",
+                "{{commentId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "28 B deja de seguir a A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"following=false\", function () {",
+                  "    pm.expect(pm.response.json().profile.following).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/{{usernameA}}/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "{{usernameA}}",
+                "follow"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "29 Perfil inexistente (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/no_existe_{{runId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "no_existe_{{runId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Cierre del flujo",
+      "item": [
+        {
+          "name": "30 A elimina su comentario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Mensaje de confirmación\", function () {",
+                  "    pm.expect(pm.response.json().message.body[0]).to.eql(\"Comment deleted successfully\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}",
+                "comments",
+                "{{commentId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "31 A elimina su artículo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Mensaje de confirmación\", function () {",
+                  "    pm.expect(pm.response.json().message.body[0]).to.eql(\"Article deleted successfully\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Token {{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "32 Artículo eliminado ya no existe (negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código de respuesta 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Cumple el esquema JSON\", function () {",
+                  "    pm.response.to.have.jsonSchema({\"type\": \"object\", \"required\": [\"errors\"], \"properties\": {\"errors\": {\"type\": \"object\", \"required\": [\"body\"], \"properties\": {\"body\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"minItems\": 1}}}}});",
+                  "});",
+                  "pm.test(\"Mensaje Article not found\", function () {",
+                  "    pm.expect(pm.response.json().errors.body[0]).to.include(\"Article not found\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/articles/{{slug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "articles",
+                "{{slug}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "usernameA",
+      "value": ""
+    },
+    {
+      "key": "emailA",
+      "value": ""
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "tokenB",
+      "value": ""
+    },
+    {
+      "key": "slug",
+      "value": ""
+    },
+    {
+      "key": "commentId",
+      "value": ""
+    }
+  ]
+}
